@@ -1,13 +1,12 @@
-# SNES controller to Sega Megadrive/Genesis adapter firmware
+# Arcade controller for Sega Megadrive/Genesis firmware
 
-AVR micro-controller firmware for an SNES controller to Sega Megadrive/Genesis adapter.
+AVR micro-controller firmware for arcade buttons on Sega Megadrive/Genesis.
 
 ## Project homepage
 
 Schematics and additional information are available on the project homepage:
 
-* English: [SNES controller to Genesis/Megadrive adapter](http://www.raphnet.net/electronique/snes2md/index_en.php)
-* French: [Adaptateur manette SNES à Genesis/Megadrive](http://www.raphnet.net/electronique/snes2md/index.php)
+TODO
 
 ## Supported micro-controllers
 
@@ -25,3 +24,6 @@ Currently supported micro-controllers:
 ## License
 
 This project is licensed under the terms of the GNU General Public License, version 2.
+
+## Attributions
+Based on work by Raphaël Assenat - https://github.com/raphnet/snes2md
