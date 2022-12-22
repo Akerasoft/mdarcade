@@ -1,4 +1,9 @@
-/* Snes controller to Genesis/Megadrive adapter
+/* Arcade controller for Genesis/Megadrive
+ * Copyright (C) 2022 Akerasoft based on work by Raphël Assénat
+ * Original work remains Copyright Raphël Assénat changes
+ * are Copyright by Akerasoft.
+ *
+ * Snes controller to Genesis/Megadrive adapter
  * Copyright (C) 2013-2016 Raphël Assénat
  *
  * This program is free software; you can redistribute it and/or modify
@@ -15,7 +20,8 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * The author may be contacted at raph@raphnet.net
+ * The original author may be contacted at raph@raphnet.net
+ * The author of changes may be contacted at robert.kolski@akerasoft.com
  */
 #include <stdint.h>
 #include <string.h>
@@ -30,17 +36,17 @@ static void hwinit(void)
 	/* PORTB
 	 *
 	 * Bit	Function	Dir		Level/pu
-	 * 0	JP COM		out		0
-	 * 1	JP1			in		1
-	 * 2	JP2			in		1
-	 * 3	SNES LATCH	out		0
-	 * 4	SNES DAT	In		1
-	 * 5	SNES CLK	out		1
+	 * 0	B Button	in		1
+	 * 1	X Button	in		1
+	 * 2	Mode Button	in		1
+	 * 3	Start Btn   in		1
+	 * 4	UP Button	in		1
+	 * 5	DOWN Button	in		1
 	 * 6	XTAL1
 	 * 7	XTAL2
 	 */
-	DDRB = 0x29;
-	PORTB = 0x36;
+	DDRB = 0x00;
+	PORTB = 0x3F;
 
 	/* PORTC
 	 *
@@ -58,18 +64,18 @@ static void hwinit(void)
 	/* PORTD
 	 *
 	 * Bit	Function	Dir		Level/pull-up
-	 * 0	-			Out		0  \___ tied together on multiuse PCB2
-	 * 1	-			Out		0  /
-	 * 2	SELECT		In		1* see note
-	 * 3	-			Out		0
-	 * 4	VCC			In		0  <---- Shorted to GND on multiuse PCB2
-	 * 5	-			Out		0
-	 * 6	-			Out		0
-	 * 7	-			Out		0
+	 * 0	Left Button	in		1
+	 * 1	Right Btn   in		1
+	 * 2	SELECT		In		0 - 1* see note (add pull down resistor)
+	 * 3	A Button	in		1
+	 * 4	C Button	In		1
+	 * 5	Y Button	In		1
+	 * 6	Z Button	In		1
+	 * 7	SW 3/6		In		0
 	 */
-	DDRD = 0xEB;
-//	PORTD = 0x04; // see note
-	PORTD = 0x00;
+	DDRD = 0x00;
+//	PORTD = 0x7F; // see note
+	PORTD = 0x7B;
 
 	// Note: Games like GoldenAxe II let the SELECT line float for a moment. With
 	// the internal pull-up, the signal rises slowly and sometimes is seen as a
@@ -371,15 +377,15 @@ struct snes_md_map atari_style4_map[] = {
 #define MD_MAP_SNES6			9
 struct snes_md_map *maps[10] = {
 	md_snes1,
-	md_snes2,
-	md_snes3,
-	md_snes4,
-	md_snes5,
-	atari_style1_map,
-	atari_style2_map,
-	atari_style3_map,
-	atari_style4_map,
-	md_snes6,
+	md_snes1,
+	md_snes1,
+	md_snes1,
+	md_snes1,
+	md_snes1,
+	md_snes1,
+	md_snes1,
+	md_snes1,
+	md_snes1,
 };
 
 #define TURBO_SPEED_30		0 // 60 / 2
@@ -496,6 +502,7 @@ int main(void)
 	char ignore_buttons = 1;
 	char tribtn_compat = 0;
 	char genesis_polling = 0;
+	char sw_3_6_btn = 0;
 
 	hwinit();
 
@@ -505,20 +512,31 @@ int main(void)
 	} else {
 		dat_pos = 0;
 	}
-
+	
 	dat_pos = 1;
+	
+	if (PIND & (1<<PIND7))
+	{
+		sw_3_6_btn = 1;
+	}
+	else
+	{
+		sw_3_6_btn = 0;
+	}
 
 	_delay_ms(20);
 
 	/* If PB1 and/or PB2 are shorted to GND (or PB0 which is
 	 * configured as an output), run in Atari-style mode. */
-	switch (PINB & 0x06) {
-		case 0x06:
-			atari_mode = 0;
-			break;
-		default:
-			atari_mode = 1;
-	}
+	//switch (PINB & 0x06) {
+	//	case 0x06:
+	//		atari_mode = 0;
+	//		break;
+	//	default:
+	//		atari_mode = 1;
+	//}
+	
+	atari_mode = 0;
 
 	snespad = snesGetGamepad();
 	snespad->update();
@@ -529,34 +547,39 @@ int main(void)
 		DDRC = 0xFF;
 		PORTC = 0xFf;
 
-		switch (last_data.snes.buttons & (~SNES_BTN_SELECT))
-		{
-			default:
-			case SNES_BTN_A:
-				cur_map_id = MD_MAP_SNES1;
-				break;
-			case SNES_BTN_B:
-				cur_map_id = MD_MAP_SNES2;
-				break;
-			case SNES_BTN_Y:
-				cur_map_id = MD_MAP_SNES3;
-				break;
-			case SNES_BTN_X:
-				cur_map_id = MD_MAP_SNES4;
-				break;
-			case SNES_BTN_L:
-				cur_map_id = MD_MAP_SNES5;
-				break;
-			case SNES_BTN_R:
-				cur_map_id = MD_MAP_SNES6;
-				break;
-		}
+		cur_map_id = MD_MAP_SNES1;
+
+		//switch (last_data.snes.buttons & (~SNES_BTN_SELECT))
+		//{
+		//	default:
+		//	case SNES_BTN_A:
+		//		cur_map_id = MD_MAP_SNES1;
+		//		break;
+		//	case SNES_BTN_B:
+		//		cur_map_id = MD_MAP_SNES2;
+		//		break;
+		//	case SNES_BTN_Y:
+		//		cur_map_id = MD_MAP_SNES3;
+		//		break;
+		//	case SNES_BTN_X:
+		//		cur_map_id = MD_MAP_SNES4;
+		//		break;
+		//	case SNES_BTN_L:
+		//		cur_map_id = MD_MAP_SNES5;
+		//		break;
+		//	case SNES_BTN_R:
+		//		cur_map_id = MD_MAP_SNES6;
+		//		break;
+		//}
 
 		// If select is down, enable 3 button compatibility mode
 		if (last_data.snes.buttons & SNES_BTN_SELECT) {
 			tribtn_compat = 1;
 		}
-
+		
+		if (sw_3_6_btn) {
+			tribtn_compat = 1;
+		}
 	} else {
 		// Simulated open-collector/switch drive for Atari
 		DDRC = 0x00;
@@ -611,6 +634,31 @@ int main(void)
 		struct snes_md_map *map;
 		uint8_t sel_low_dat, sel_high_dat, sel_x_dat;
 		int i;
+		
+		if (PIND & (1<<PIND7))
+		{
+			// if the switch was off but now it is on
+			// then enable 3 button mode
+			if (!sw_3_6_btn)
+			{
+				sw_3_6_btn = 1;
+				tribtn_compat = 1;
+			}
+		}
+		else
+		{
+			// if the switch was off but
+			// mode was pressed at start up, then keep 3 button mode
+			// e.g. no code here
+
+			// if the switch was on but now it is off
+			// then enable 6 button mode
+			if (sw_3_6_btn)
+			{
+				sw_3_6_btn = 0;
+				tribtn_compat = 0;
+			}
+		}
 
 		if (!atari_mode)
 		{

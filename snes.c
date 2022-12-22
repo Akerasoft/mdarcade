@@ -1,4 +1,9 @@
-/* Snes controller to Genesis/Megadrive adapter
+/* Arcade controller for Genesis/Megadrive
+ * Copyright (C) 2022 Akerasoft
+ * Developer: Robert Kolski
+ * Changes are Copyright Akerasoft, original work Copyright by Raphaël Assénat
+ *
+ * Snes controller to Genesis/Megadrive adapter
  * Copyright (C) 2013-2016 Raphël Assénat
  *
  * This file is based on earlier work:
@@ -35,28 +40,6 @@
 
 #define GAMEPAD_BYTES	2
 
-/******** IO port definitions **************/
-#define SNES_LATCH_DDR	DDRB
-#define SNES_LATCH_PORT	PORTB
-#define SNES_LATCH_BIT	(1<<3)
-
-#define SNES_CLOCK_DDR	DDRB
-#define SNES_CLOCK_PORT	PORTB
-#define SNES_CLOCK_BIT	(1<<5)
-
-#define SNES_DATA_PORT	PORTB
-#define SNES_DATA_DDR	DDRB
-#define SNES_DATA_PIN	PINB
-#define SNES_DATA_BIT	(1<<4)
-
-/********* IO port manipulation macros **********/
-#define SNES_LATCH_LOW()	do { SNES_LATCH_PORT &= ~(SNES_LATCH_BIT); } while(0)
-#define SNES_LATCH_HIGH()	do { SNES_LATCH_PORT |= SNES_LATCH_BIT; } while(0)
-#define SNES_CLOCK_LOW()	do { SNES_CLOCK_PORT &= ~(SNES_CLOCK_BIT); } while(0)
-#define SNES_CLOCK_HIGH()	do { SNES_CLOCK_PORT |= SNES_CLOCK_BIT; } while(0)
-
-#define SNES_GET_DATA()	(SNES_DATA_PIN & SNES_DATA_BIT)
-
 /*********** prototypes *************/
 static char snesInit(void);
 static char snesUpdate(void);
@@ -75,21 +58,17 @@ static char snesInit(void)
 	sreg = SREG;
 	cli();
 	
-	// clock and latch as output
-	SNES_LATCH_DDR |= SNES_LATCH_BIT;
-	SNES_CLOCK_DDR |= SNES_CLOCK_BIT;
+	// do not alter PB6 and PB7, change PB0 to PB6 input
+	DDRB &= 0xC0;
 	
-	// data as input
-	SNES_DATA_DDR &= ~(SNES_DATA_BIT);
-	// enable pullup. This should prevent random toggling of pins
-	// when no controller is connected.
-	SNES_DATA_PORT |= SNES_DATA_BIT;
+	// do not alter PB6 and PB7, change PB0 to PB6 to pullpup resistor enabled
+	PORTB |= 0x3F;
 
-	// clock is normally high
-	SNES_CLOCK_PORT |= SNES_CLOCK_BIT;
-
-	// LATCH is Active HIGH
-	SNES_LATCH_PORT &= ~(SNES_LATCH_BIT);
+	// do not alter PD2 and PD7, change PD0, PD1 and PD3 to PB6 input
+	DDRD &= 0x84;
+	
+	// do not alter PD2 and PD7, change PD0, PD1 and PD3 to PB6 to pullpup resistor enabled
+	PORTD |= 0x7B;
 
 	snesUpdate();
 
@@ -101,24 +80,26 @@ static char snesInit(void)
 
 /*
  *
-       Clock Cycle     Button Reported
+        PIN             Button Reported
         ===========     ===============
-        1               B
-        2               Y
-        3               Select
-        4               Start
-        5               Up on joypad
-        6               Down on joypad
-        7               Left on joypad
-        8               Right on joypad
-        9               A
-        10              X
-        11              L
-        12              R
-        13              none (always high)
-        14              none (always high)
-        15              none (always high)
-        16              none (always high)
+BYTE 0
+        PB0             B                  - MD B
+        PB1             Y                  - MD X
+        PB2             Select             - MD MODE
+        PB3             Start              - MD START
+        PB4             Up on joypad       - MD UP
+        PB5             Down on joypad     - MD DOWN
+        PD0             Left on joypad     - MD LEFT
+        PD1             Right on joypad    - MD RIGHT
+BYTE 1
+        PD3             A                  - MD A
+        PD4             X                  - MD C
+        PD5             L                  - MD Y
+        PD6             R                  - MD Z
+        NA              none (always high) (zero)
+        NA              none (always high) (zero)
+        NA              none (always high) (zero)
+        NA              none (always high) (zero)
  *
  */
 
@@ -127,36 +108,36 @@ static char snesUpdate(void)
 	int i;
 	unsigned char tmp=0;
 
-	SNES_LATCH_HIGH();
-	_delay_us(12);
-	SNES_LATCH_LOW();
-
-	for (i=0; i<8; i++)
+	for (i = 0; i < 6; i++)
 	{
-		_delay_us(6);
-		SNES_CLOCK_LOW();
-		
-		tmp <<= 1;	
-		if (!SNES_GET_DATA()) { tmp |= 0x01; }
-
-		_delay_us(6);
-		
-		SNES_CLOCK_HIGH();
+		tmp <<= 1;
+		if (!(PINB & (1<<i)))
+		{
+			tmp |= 0x01;
+		}
+	}
+	for (i = 0; i < 2; i++)
+	{
+		tmp <<= 1;
+		if (!(PIND & (1<<i)))
+		{
+			tmp |= 0x01;
+		}
 	}
 	last_read_controller_bytes[0] = tmp;
-	for (i=0; i<8; i++)
+	for (i = 3; i < 7; i++)
 	{
-		_delay_us(6);
-
-		SNES_CLOCK_LOW();
-
-		tmp <<= 1;	
-		if (!SNES_GET_DATA()) { tmp |= 0x01; }
-		
-		_delay_us(6);
-		SNES_CLOCK_HIGH();
+		tmp <<= 1;
+		if (!(PIND & (1<<i)))
+		{
+			tmp |= 0x01;
+		}
 	}
+	tmp <<= 4;
 	last_read_controller_bytes[1] = tmp;
+	
+	// simulate the delay of the original code
+	_delay_us(204);
 
 	return 0;
 }
