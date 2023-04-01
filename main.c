@@ -74,8 +74,7 @@ static void hwinit(void)
 	 * 7	SW 3/6		In		0
 	 */
 	DDRD = 0x00;
-//	PORTD = 0x7F; // see note
-	PORTD = 0x7B;
+	PORTD = 0x7B; // see note
 
 	// For the Akerasoft project a 10k-ohm pull down resistor is used
 	// at PORTD pin 2.
@@ -287,7 +286,6 @@ int main(void)
 	gamepad_data last_data;
 	uint8_t next_data[8];
 	Gamepad *controllerpad;
-	//uint8_t cur_map_id;
 	char ignore_buttons = 1;
 	char tribtn_compat = 0;
 	char genesis_polling = 0;
