@@ -3,7 +3,7 @@
  * Original work remains Copyright Raphël Assénat changes
  * are Copyright by Akerasoft.
  *
- * Snes controller to Genesis/Megadrive adapter
+ * Original work: Snes controller to Genesis/Megadrive adapter
  * Copyright (C) 2013-2016 Raphël Assénat
  *
  * This program is free software; you can redistribute it and/or modify
@@ -29,7 +29,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
-#include "snes.h"
+#include "controller.h"
 
 static void hwinit(void)
 {
@@ -76,6 +76,9 @@ static void hwinit(void)
 	DDRD = 0x00;
 //	PORTD = 0x7F; // see note
 	PORTD = 0x7B;
+
+	// For the Akerasoft project a 10k-ohm pull down resistor is used
+	// at PORTD pin 2.
 
 	// Note: Games like GoldenAxe II let the SELECT line float for a moment. With
 	// the internal pull-up, the signal rises slowly and sometimes is seen as a
@@ -181,8 +184,8 @@ EMPTY_INTERRUPT(INT0_vect);
 #define OPT_TURBO			1	/* This button is turbo */
 #define OPT_TURBO_SEL_SPEED	2	/* This button cycles through turbo speeds */
 
-struct snes_md_map {
-	uint16_t snes_btn;
+struct controller_md_map {
+	uint16_t controller_btn;
 	uint8_t s[3]; // [0] SELECT LOW STATE, [1] SELECT HIGH STATE, [2] 3RD HIGH STATE
 	char opts;
 };
@@ -202,190 +205,21 @@ struct snes_md_map {
 #define GEN_BTN_DPAD_LEFT	{0x00, 0x08, 0x00 }
 #define GEN_BTN_DPAD_RIGHT	{0x00, 0x04, 0x00 }
 
-#define ATARI_BTN_DPAD_UP		{0x20, 0x20, 0x20 }
-#define ATARI_BTN_DPAD_DOWN		{0x10, 0x10, 0x10 }
-#define ATARI_BTN_DPAD_LEFT		{0x08, 0x08, 0x08 }
-#define ATARI_BTN_DPAD_RIGHT	{0x04, 0x04, 0x04 }
-#define ATARI_BTN_FIRE			{0x02, 0x02, 0x02 }
-#define ATARI_BTN_FIRE2			{0x01, 0x01, 0x01 }
+struct controller_md_map md_controller[] = {
 
-
-struct snes_md_map md_snes1[] = {
-
-	{ SNES_BTN_A,			GEN_BTN_A },
-	{ SNES_BTN_B, 			GEN_BTN_B },
-	{ SNES_BTN_X,			GEN_BTN_C },
-	{ SNES_BTN_Y,			GEN_BTN_X },
-	{ SNES_BTN_L,			GEN_BTN_Y },
-	{ SNES_BTN_R,			GEN_BTN_Z },
-	{ SNES_BTN_START,		GEN_BTN_START },
-	{ SNES_BTN_SELECT,		GEN_BTN_MODE },
-	{ SNES_BTN_DPAD_UP,		GEN_BTN_DPAD_UP },
-	{ SNES_BTN_DPAD_DOWN,	GEN_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_LEFT,	GEN_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_RIGHT,	GEN_BTN_DPAD_RIGHT },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-struct snes_md_map md_snes2[] = {
-
-	{ SNES_BTN_A,			GEN_BTN_B },
-	{ SNES_BTN_B, 			GEN_BTN_A },
-	{ SNES_BTN_X,			GEN_BTN_X },
-	{ SNES_BTN_Y,			GEN_BTN_C },
-	{ SNES_BTN_L,			GEN_BTN_Y },
-	{ SNES_BTN_R,			GEN_BTN_Z },
-	{ SNES_BTN_START,		GEN_BTN_START },
-	{ SNES_BTN_SELECT,		GEN_BTN_MODE },
-	{ SNES_BTN_DPAD_UP,		GEN_BTN_DPAD_UP },
-	{ SNES_BTN_DPAD_DOWN,	GEN_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_LEFT,	GEN_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_RIGHT,	GEN_BTN_DPAD_RIGHT },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-struct snes_md_map md_snes3[] = {
-
-	{ SNES_BTN_A,			GEN_BTN_C },
-	{ SNES_BTN_B, 			GEN_BTN_B },
-	{ SNES_BTN_X,			GEN_BTN_Y },
-	{ SNES_BTN_Y,			GEN_BTN_A },
-	{ SNES_BTN_L,			GEN_BTN_X },
-	{ SNES_BTN_R,			GEN_BTN_Z },
-	{ SNES_BTN_START,		GEN_BTN_START },
-	{ SNES_BTN_SELECT,		GEN_BTN_MODE },
-	{ SNES_BTN_DPAD_UP,		GEN_BTN_DPAD_UP },
-	{ SNES_BTN_DPAD_DOWN,	GEN_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_LEFT,	GEN_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_RIGHT,	GEN_BTN_DPAD_RIGHT },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-struct snes_md_map md_snes4[] = {
-	{ SNES_BTN_X,			GEN_BTN_A },
-	{ SNES_BTN_Y, 			GEN_BTN_B },
-	{ SNES_BTN_B,			GEN_BTN_C },
-	{ SNES_BTN_A,			GEN_BTN_X },
-	{ SNES_BTN_R,			GEN_BTN_Y },
-	{ SNES_BTN_L,			GEN_BTN_Z },
-	{ SNES_BTN_START,		GEN_BTN_START },
-	{ SNES_BTN_SELECT,		GEN_BTN_MODE },
-	{ SNES_BTN_DPAD_UP,		GEN_BTN_DPAD_UP },
-	{ SNES_BTN_DPAD_DOWN,	GEN_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_LEFT,	GEN_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_RIGHT,	GEN_BTN_DPAD_RIGHT },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-struct snes_md_map md_snes5[] = {
-	{ SNES_BTN_A,			GEN_BTN_A },
-	{ SNES_BTN_B, 			GEN_BTN_B },
-	{ SNES_BTN_X,			GEN_BTN_C },
-	{ SNES_BTN_Y,			GEN_BTN_X },
-	{ SNES_BTN_L,			GEN_BTN_Y },
-	{ SNES_BTN_R,			GEN_BTN_Z },
-	{ SNES_BTN_START,		GEN_BTN_START },
-	{ SNES_BTN_SELECT,		GEN_BTN_MODE },
-	{ SNES_BTN_DPAD_DOWN,	GEN_BTN_DPAD_UP },
-	{ SNES_BTN_DPAD_UP,		GEN_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_RIGHT,	GEN_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_LEFT,	GEN_BTN_DPAD_RIGHT },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-struct snes_md_map md_snes6[] = {
-	{ SNES_BTN_A,			GEN_BTN_B },
-	{ SNES_BTN_B, 			GEN_BTN_A },
-	{ SNES_BTN_X,			GEN_BTN_Y },
-	{ SNES_BTN_Y,			GEN_BTN_X },
-	{ SNES_BTN_L,			GEN_BTN_Z },
-	{ SNES_BTN_R,			GEN_BTN_C },
-	{ SNES_BTN_START,		GEN_BTN_START },
-	{ SNES_BTN_SELECT,		GEN_BTN_MODE },
-	{ SNES_BTN_DPAD_UP,		GEN_BTN_DPAD_UP },
-	{ SNES_BTN_DPAD_DOWN,	GEN_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_LEFT,	GEN_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_RIGHT,	GEN_BTN_DPAD_RIGHT },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-
-struct snes_md_map atari_style1_map[] = {
-	{ SNES_BTN_DPAD_UP,		ATARI_BTN_DPAD_UP },
-	{ SNES_BTN_DPAD_DOWN,	ATARI_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_LEFT,	ATARI_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_RIGHT,	ATARI_BTN_DPAD_RIGHT },
-	{ SNES_BTN_A | SNES_BTN_B,		ATARI_BTN_FIRE },
-
-	{ SNES_BTN_Y | SNES_BTN_R,		ATARI_BTN_FIRE,	OPT_TURBO },
-	{ SNES_BTN_X | SNES_BTN_L,		ATARI_BTN_FIRE2, },
-	{ SNES_BTN_SELECT,		DB9_NULL,	OPT_TURBO_SEL_SPEED },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-struct snes_md_map atari_style2_map[] = {
-	{ SNES_BTN_DPAD_DOWN,	ATARI_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_LEFT,	ATARI_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_RIGHT,	ATARI_BTN_DPAD_RIGHT },
-	{ SNES_BTN_B,			ATARI_BTN_DPAD_UP },
-	{ SNES_BTN_A,			ATARI_BTN_FIRE },
-
-	{ SNES_BTN_Y | SNES_BTN_R,			ATARI_BTN_FIRE,	OPT_TURBO },
-	{ SNES_BTN_X | SNES_BTN_L,			ATARI_BTN_FIRE2, },
-	{ SNES_BTN_SELECT,		DB9_NULL,	OPT_TURBO_SEL_SPEED },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-struct snes_md_map atari_style3_map[] = {
-	{ SNES_BTN_DPAD_DOWN,	ATARI_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_LEFT,	ATARI_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_RIGHT,	ATARI_BTN_DPAD_RIGHT },
-	{ SNES_BTN_A,			ATARI_BTN_DPAD_UP },
-	{ SNES_BTN_B,			ATARI_BTN_FIRE },
-
-	{ SNES_BTN_X | SNES_BTN_L,			ATARI_BTN_FIRE2	 },
-	{ SNES_BTN_Y | SNES_BTN_R,			ATARI_BTN_FIRE,	OPT_TURBO },
-	{ SNES_BTN_SELECT,		DB9_NULL,	OPT_TURBO_SEL_SPEED },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-struct snes_md_map atari_style4_map[] = {
-	{ SNES_BTN_DPAD_UP,		ATARI_BTN_DPAD_DOWN },
-	{ SNES_BTN_DPAD_DOWN,	ATARI_BTN_DPAD_UP },
-	{ SNES_BTN_DPAD_RIGHT,	ATARI_BTN_DPAD_LEFT },
-	{ SNES_BTN_DPAD_LEFT,	ATARI_BTN_DPAD_RIGHT },
-	{ SNES_BTN_A,			ATARI_BTN_DPAD_UP },
-	{ SNES_BTN_B,			ATARI_BTN_FIRE },
-
-	{ SNES_BTN_X | SNES_BTN_L,	ATARI_BTN_FIRE2, },
-	{ SNES_BTN_Y | SNES_BTN_R,	ATARI_BTN_FIRE,	OPT_TURBO },
-	{ SNES_BTN_SELECT,		DB9_NULL,	OPT_TURBO_SEL_SPEED },
-	{ 0, }, /* SNES btns == 0 termination. */
-};
-
-
-
-#define MD_MAP_SNES1			0
-#define MD_MAP_SNES2			1
-#define MD_MAP_SNES3			2
-#define MD_MAP_SNES4			3
-#define MD_MAP_SNES5			4
-#define ATARI_MAP_STYLE1		5
-#define ATARI_MAP_STYLE2		6
-#define ATARI_MAP_STYLE3		7
-#define ATARI_MAP_STYLE4		8
-#define MD_MAP_SNES6			9
-struct snes_md_map *maps[10] = {
-	md_snes1,
-	md_snes1,
-	md_snes1,
-	md_snes1,
-	md_snes1,
-	md_snes1,
-	md_snes1,
-	md_snes1,
-	md_snes1,
-	md_snes1,
+	{ CONTROLLER_BTN_A,			GEN_BTN_A },
+	{ CONTROLLER_BTN_B, 		GEN_BTN_B },
+	{ CONTROLLER_BTN_C,			GEN_BTN_C },
+	{ CONTROLLER_BTN_X,			GEN_BTN_X },
+	{ CONTROLLER_BTN_Y,			GEN_BTN_Y },
+	{ CONTROLLER_BTN_Z,			GEN_BTN_Z },
+	{ CONTROLLER_BTN_START,		GEN_BTN_START },
+	{ CONTROLLER_BTN_MODE,		GEN_BTN_MODE },
+	{ CONTROLLER_BTN_DPAD_UP,	GEN_BTN_DPAD_UP },
+	{ CONTROLLER_BTN_DPAD_DOWN,	GEN_BTN_DPAD_DOWN },
+	{ CONTROLLER_BTN_DPAD_LEFT,	GEN_BTN_DPAD_LEFT },
+	{ CONTROLLER_BTN_DPAD_RIGHT,	GEN_BTN_DPAD_RIGHT },
+	{ 0, }, /* CONTROLLER btns == 0 termination. */
 };
 
 #define TURBO_SPEED_30		0 // 60 / 2
@@ -413,17 +247,6 @@ static void turboCycleSpeed(uint8_t btn_state)
 
 static uint8_t turbo_lock_on = 0;
 
-static void turboToggleLockOn(uint8_t btn_state)
-{
-	static uint8_t last_state;
-
-	if (btn_state && !last_state) {
-		turbo_lock_on = !turbo_lock_on;
-	}
-
-	last_state = btn_state;
-}
-
 static uint8_t turboGetTop(void)
 {
 	switch (turbo_speed)
@@ -446,39 +269,6 @@ static uint8_t turboGetTop(void)
 	}
 }
 
-static void turboSleep(void)
-{
-	switch (turbo_speed)
-	{
-			// 120Hz base
-		default:
-		case TURBO_SPEED_30:
-		case TURBO_SPEED_20:
-		case TURBO_SPEED_15:
-//			_delay_us(8333);
-			// This delay is trimmed to account for overhead and obtain 29.97Hz.
-			_delay_us(8208);
-			break;
-
-			// 100Hz base
-		case TURBO_SPEED_25:
-		case TURBO_SPEED_16:
-		case TURBO_SPEED_12_5:
-			//_delay_us(10000); // 24.66
-			_delay_us(9860); // 25 Hz
-			break;
-	}
-}
-
-static char turboPoll(void)
-{
-	static uint8_t c=0;
-
-	c = !c;
-
-	return c;
-}
-
 static uint8_t turbo_state=0;
 
 static void turboDo(void)
@@ -496,9 +286,8 @@ int main(void)
 {
 	gamepad_data last_data;
 	uint8_t next_data[8];
-	Gamepad *snespad;
-	uint8_t cur_map_id;
-	char atari_mode;
+	Gamepad *controllerpad;
+	//uint8_t cur_map_id;
 	char ignore_buttons = 1;
 	char tribtn_compat = 0;
 	char genesis_polling = 0;
@@ -526,78 +315,21 @@ int main(void)
 
 	_delay_ms(20);
 
-	/* If PB1 and/or PB2 are shorted to GND (or PB0 which is
-	 * configured as an output), run in Atari-style mode. */
-	//switch (PINB & 0x06) {
-	//	case 0x06:
-	//		atari_mode = 0;
-	//		break;
-	//	default:
-	//		atari_mode = 1;
-	//}
-	
-	atari_mode = 0;
+	controllerpad = controllerGetGamepad();
+	controllerpad->update();
+	controllerpad->getReport(&last_data);
 
-	snespad = snesGetGamepad();
-	snespad->update();
-	snespad->getReport(&last_data);
+	// Push-pull drive for Genesis
+	DDRC = 0xFF;
+	PORTC = 0xFf;
 
-	if (!atari_mode) {
-		// Push-pull drive for Genesis
-		DDRC = 0xFF;
-		PORTC = 0xFf;
-
-		cur_map_id = MD_MAP_SNES1;
-
-		//switch (last_data.snes.buttons & (~SNES_BTN_SELECT))
-		//{
-		//	default:
-		//	case SNES_BTN_A:
-		//		cur_map_id = MD_MAP_SNES1;
-		//		break;
-		//	case SNES_BTN_B:
-		//		cur_map_id = MD_MAP_SNES2;
-		//		break;
-		//	case SNES_BTN_Y:
-		//		cur_map_id = MD_MAP_SNES3;
-		//		break;
-		//	case SNES_BTN_X:
-		//		cur_map_id = MD_MAP_SNES4;
-		//		break;
-		//	case SNES_BTN_L:
-		//		cur_map_id = MD_MAP_SNES5;
-		//		break;
-		//	case SNES_BTN_R:
-		//		cur_map_id = MD_MAP_SNES6;
-		//		break;
-		//}
-
-		// If select is down, enable 3 button compatibility mode
-		if (last_data.snes.buttons & SNES_BTN_SELECT) {
-			tribtn_compat = 1;
-		}
+	// If MODE is down, enable 3 button compatibility mode
+	if (last_data.controller.buttons & CONTROLLER_BTN_MODE) {
+		tribtn_compat = 1;
+	}
 		
-		if (sw_3_6_btn) {
-			tribtn_compat = 1;
-		}
-	} else {
-		// Simulated open-collector/switch drive for Atari
-		DDRC = 0x00;
-		PORTC = 0x00;
-		switch (last_data.snes.buttons)
-		{
-			default:
-				cur_map_id = ATARI_MAP_STYLE1;
-				break;
-			case SNES_BTN_B:
-				cur_map_id = ATARI_MAP_STYLE2;
-				break;
-			case SNES_BTN_A:
-				cur_map_id = ATARI_MAP_STYLE3;
-				break;
-			case SNES_BTN_X:
-				cur_map_id = ATARI_MAP_STYLE4;
-		}
+	if (sw_3_6_btn) {
+		tribtn_compat = 1;
 	}
 
 	// setup SELECT external interrupt
@@ -624,14 +356,12 @@ int main(void)
 #error MCU not supported
 #endif
 
-	if (!atari_mode) {
-		// Interrupts are only used by the Genesis mode
-		sei();
-	}
+	// Interrupts are only used by the Genesis mode
+	sei();
 
 	while(1)
 	{
-		struct snes_md_map *map;
+		struct controller_md_map *map;
 		uint8_t sel_low_dat, sel_high_dat, sel_x_dat;
 		int i;
 		
@@ -660,86 +390,72 @@ int main(void)
 			}
 		}
 
-		if (!atari_mode)
+		if (!genesis_polling)
 		{
-			if (!genesis_polling) {
-				_delay_ms(15);
-				snespad->update();
-				snespad->getReport(&last_data);
+			_delay_ms(15);
+			controllerpad->update();
+			controllerpad->getReport(&last_data);
 
-				memcpy((void*)mddata, next_data, 8);
-				if (PIND & (1<<PIND2)) {
-					dat_pos = 1;
-					PORTC = mddata[0];
-				} else {
-					PORTC = mddata[1];
-					dat_pos = 0;
-				}
-
-#if defined(__AVR_ATmega168__)
-				OCR0A = mddata[dat_pos];
-#elif defined(__AVR_ATmega8__)
-				ICR1L = mddata[dat_pos];
-#else
-#error MCU not supported yet
-#endif
-				if (polled) {
-					genesis_polling = 1;
-				}
+			memcpy((void*)mddata, next_data, 8);
+			if (PIND & (1<<PIND2)) {
+				dat_pos = 1;
+				PORTC = mddata[0];
+			} else {
+				PORTC = mddata[1];
+				dat_pos = 0;
 			}
-			else {
-				char c = 0;
-				// Genesis mode
-				polled = 0;
-				while (!polled) {
-					c++;
-					_delay_ms(1);
-					if (c > 100) {
-						// After 100ms, fall back to self-timed mode (for SMS games)
-						genesis_polling = 0;
-						break;
-					}
-				}
-				_delay_ms(1.5);
-
-				// Timeout from the 6button mode
-				memcpy((void*)mddata, next_data, 8);
-				if (PIND & (1<<PIND2)) {
-					dat_pos = 1;
-					PORTC = mddata[0];
-				} else {
-					PORTC = mddata[1];
-					dat_pos = 0;
-				}
 
 #if defined(__AVR_ATmega168__)
-				OCR0A = mddata[dat_pos];
+			OCR0A = mddata[dat_pos];
 #elif defined(__AVR_ATmega8__)
-				ICR1L = mddata[dat_pos];
+			ICR1L = mddata[dat_pos];
 #else
 #error MCU not supported yet
 #endif
-
-
-				snespad->update();
-				snespad->getReport(&last_data);
+			if (polled) {
+				genesis_polling = 1;
 			}
 		}
-		else {
-			// Atari mode
-			PORTC = 0x00;
-			DDRC = next_data[0] ^ 0xff;
-			turboSleep();
+		else
+		{
+			char c = 0;
+			// Genesis mode
+			polled = 0;
+			while (!polled)
+			{
+				c++;
+				_delay_ms(1);
+				if (c > 100)
+				{
+					// After 100ms, fall back to self-timed mode (for SMS games)
+					genesis_polling = 0;
+					break;
+				}
+			}
+			_delay_ms(1.5);
 
-			// make sure the controller is polled at
-			// 50/60 hz regardless of the loop
-			// timing for turbo which is higher.
-			if (turboPoll()) {
-				snespad->update();
-				snespad->getReport(&last_data);
+			// Timeout from the 6button mode
+			memcpy((void*)mddata, next_data, 8);
+			if (PIND & (1<<PIND2))
+			{
+				dat_pos = 1;
+				PORTC = mddata[0];
+			}
+			else
+			{
+				PORTC = mddata[1];
+				dat_pos = 0;
 			}
 
-			turboToggleLockOn(last_data.snes.buttons & SNES_BTN_START);
+#if defined(__AVR_ATmega168__)
+			OCR0A = mddata[dat_pos];
+#elif defined(__AVR_ATmega8__)
+			ICR1L = mddata[dat_pos];
+#else
+#error MCU not supported yet
+#endif
+			controllerpad->update();
+			controllerpad->getReport(&last_data);
 		}
 
 		turboDo();
@@ -748,12 +464,12 @@ int main(void)
 		sel_high_dat = 0;
 		sel_x_dat = 0;
 
-		map = maps[cur_map_id];
-		while (map->snes_btn) {
+		map = md_controller;
+		while (map->controller_btn) {
 			// To prevent buttons pressed at powerup (for mappings) from confusing
 			// controller detection, buttons are reported as idle until we first
 			// see a 'no button pressed' state.
-			if (ignore_buttons && (0 == (last_data.snes.buttons & SNES_BTN_ALL))) {
+			if (ignore_buttons && (0 == (last_data.controller.buttons & CONTROLLER_BTN_ALL))) {
 				ignore_buttons = 0;
 			}
 
@@ -767,7 +483,7 @@ int main(void)
 				}
 			}
 
-			if ((last_data.snes.buttons & map->snes_btn))
+			if ((last_data.controller.buttons & map->controller_btn))
 			{
 				if (!(map->opts&OPT_TURBO) || turbo_state) {
 					if (!ignore_buttons) {
@@ -779,7 +495,7 @@ int main(void)
 			}
 
 			if ((map->opts&OPT_TURBO_SEL_SPEED)) {
-				turboCycleSpeed(last_data.snes.buttons & map->snes_btn);
+				turboCycleSpeed(last_data.controller.buttons & map->controller_btn);
 			}
 
 			map++;
