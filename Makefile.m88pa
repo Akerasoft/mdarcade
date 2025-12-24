@@ -1,0 +1,44 @@
+CC=avr-gcc
+AS=$(CC)
+LD=$(CC)
+CPU=atmega88pa
+CFLAGS=-Wall -mmcu=$(CPU) -DF_CPU=16000000L -Os -g -Werror
+LDFLAGS=-mmcu=$(CPU) -Wl,-Map=snes2md.map -Wl,--section-start=.boot=0x3800
+AVRDUDE=avrdude -p m88pa -P $(avrisp_comport) -c avrisp
+
+OBJS=main.o controller.o
+
+all: mdarcade_atmega88pa.hex
+
+clean:
+	rm -f mdarcade_atmega88pa.elf mdarcade_atmega88pa.hex mdarcade_atmega88pa.map $(OBJS)
+
+mdarcade_atmega88pa.elf: $(OBJS)
+	$(LD) $(OBJS) $(LDFLAGS) -o mdarcade_atmega88pa.elf
+
+mdarcade_atmega88pa.hex: mdarcade_atmega88pa.elf
+	avr-objcopy -j .data -j .text -j .boot -O ihex mdarcade_atmega88pa.elf mdarcade_atmega88pa.hex
+	avr-size mdarcade_atmega88pa.elf
+
+#EFUSE=0x01
+#LFUSE=0xD7
+#HFUSE=0xDC
+
+EFUSE=0xF9
+LFUSE=0xDF
+HFUSE=0xDF
+
+fuse:
+	$(AVRDUDE) -Uhfuse:w:$(HFUSE):m -Ulfuse:w:$(LFUSE):m -Uefuse:w:$(EFUSE):m -b 19200
+
+erase:
+	$(AVRDUDE) -e -b 19200
+
+flash: mdarcade_atmega88pa.hex
+	$(AVRDUDE) -Uflash:w:mdarcade_atmega88pa.hex -b 19200
+
+reset:
+	$(AVRDUDE) -b 19200
+
+%.o: %.S
+	$(CC) $(CFLAGS) -c $<

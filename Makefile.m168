@@ -3,22 +3,22 @@ AS=$(CC)
 LD=$(CC)
 CPU=atmega168
 CFLAGS=-Wall -mmcu=$(CPU) -DF_CPU=16000000L -Os -g -Werror
-LDFLAGS=-mmcu=$(CPU) -Wl,-Map=snes2md.map -Wl,--section-start=.boot=0x3800
+LDFLAGS=-mmcu=$(CPU) -Wl,-Map=mdarcade_atmega168.map -Wl,--section-start=.boot=0x3800
 AVRDUDE=avrdude -p m168 -P $(avrisp_comport) -c avrisp
 
 OBJS=main.o controller.o
 
-all: mdarcade.hex
+all: mdarcade_atmega168.hex
 
 clean:
-	rm -f mdarcade.elf mdarcade.hex mdarcade.map $(OBJS)
+	rm -f mdarcade_atmega168.elf mdarcade_atmega168.hex mdarcade_atmega168.map $(OBJS)
 
-mdarcade.elf: $(OBJS)
-	$(LD) $(OBJS) $(LDFLAGS) -o mdarcade.elf
+mdarcade_atmega168.elf: $(OBJS)
+	$(LD) $(OBJS) $(LDFLAGS) -o mdarcade_atmega168.elf
 
-mdarcade.hex: mdarcade.elf
-	avr-objcopy -j .data -j .text -j .boot -O ihex mdarcade.elf mdarcade.hex
-	avr-size mdarcade.elf
+mdarcade_atmega168.hex: mdarcade_atmega168.elf
+	avr-objcopy -j .data -j .text -j .boot -O ihex mdarcade_atmega168.elf mdarcade_atmega168.hex
+	avr-size mdarcade_atmega168.elf
 
 #EFUSE=0x01
 #LFUSE=0xD7
@@ -34,8 +34,8 @@ fuse:
 erase:
 	$(AVRDUDE) -e -b 19200
 
-flash: snes2md.hex
-	$(AVRDUDE) -Uflash:w:mdarcade.hex -b 19200
+flash: mdarcade_atmega168.hex
+	$(AVRDUDE) -Uflash:w:mdarcade_atmega168.hex -b 19200
 
 reset:
 	$(AVRDUDE) -b 19200

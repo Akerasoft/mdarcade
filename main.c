@@ -122,6 +122,12 @@ asm volatile(
 		// with in/out instructions. So ICR1L was not available.
 		"	in __zero_reg__, 0x27 	; OCR0A		\n"
 		"	out 0x08, __zero_reg__	; PORTC		\n"
+#elif defined(__AVR_ATmega88PA__)
+		// PORTC address is different.
+		// And we can only use the first 64 registers
+		// with in/out instructions. So ICR1L was not available.
+		"	in __zero_reg__, 0x27 	; OCR0A		\n"
+		"	out 0x08, __zero_reg__	; PORTC		\n"
 #elif defined(__AVR_ATmega8__)
 		"	in __zero_reg__, 0x26 	; ICR1L		\n"
 		"	out 0x15, __zero_reg__	; PORTC		\n"
@@ -158,6 +164,8 @@ asm volatile(
 		"	ld r16, Z					\n"
 
 #if defined(__AVR_ATmega168__)
+		"	out 0x27, r16			;	 OCR0A		\n" // next value
+#elif defined(__AVR_ATmega88PA__)
 		"	out 0x27, r16			;	 OCR0A		\n" // next value
 #elif defined(__AVR_ATmega8__)
 		"	out 0x26, r16			;	 ICR1L		\n" // next value
@@ -350,6 +358,14 @@ int main(void)
 	/* Any changes triggers INT0 */
 	EICRA = (1<<ISC00);
 	EIMSK = (1<<INT0);
+#elif defined(__AVR_ATmega88PA__)
+	/* Move the vector to the bootloader section where we have direct code for INT0. */
+	MCUCR = (1<<IVCE);
+	MCUCR = (1<<IVSEL);
+
+	/* Any changes triggers INT0 */
+	EICRA = (1<<ISC00);
+	EIMSK = (1<<INT0);
 #else
 #error MCU not supported
 #endif
@@ -405,6 +421,8 @@ int main(void)
 
 #if defined(__AVR_ATmega168__)
 			OCR0A = mddata[dat_pos];
+#elif defined(__AVR_ATmega88PA__)
+			OCR0A = mddata[dat_pos];
 #elif defined(__AVR_ATmega8__)
 			ICR1L = mddata[dat_pos];
 #else
@@ -446,6 +464,8 @@ int main(void)
 			}
 
 #if defined(__AVR_ATmega168__)
+			OCR0A = mddata[dat_pos];
+#elif defined(__AVR_ATmega88PA__)
 			OCR0A = mddata[dat_pos];
 #elif defined(__AVR_ATmega8__)
 			ICR1L = mddata[dat_pos];
