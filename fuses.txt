@@ -1,0 +1,7 @@
+Fuses for Sega Genesis/Mega Drive arcade controller.
+ATMEGA88PA, ATMEGA168
+Uses 16MHz crystal with clock divider off so the speed is 16MHz.
+
+EFUSE=0xF9
+LFUSE=0xDF
+HFUSE=0xDF
